@@ -66,6 +66,87 @@ namespace SRWE
 			UpdateCaption();
 			RefreshRecentProfilesMenu();
 			AutoAttachToLastProcess();
+			HandleArgs();
+		}
+
+		private void HandleArgs()
+		{
+			if (Program.Args.Length > 0)
+			{
+				var autoAttach = "";
+				var profilePath = "";
+				var autoExit = false;
+
+				// check command line parameters
+				for (int i = 0; i < Program.Args.Length; i++)
+				{
+					switch (Program.Args[i].ToLower())
+					{
+						case "-profile":
+						case "/profile":
+							if (++i < Program.Args.Length)
+							{ profilePath = Program.Args[i]; }
+							break;
+						case "-process":
+						case "/process":
+							if (++i < Program.Args.Length)
+							{ autoAttach = Program.Args[i]; }
+							break;
+						case "-autoexit":
+						case "/autoexit":
+							autoExit = true;
+							break;
+						default:
+							break;
+					}
+				}
+
+				// attach to process
+				if (!string.IsNullOrWhiteSpace(autoAttach))
+				{
+					var moduleNameToProcess = new Dictionary<string, Process>();
+					foreach (var process in Process.GetProcesses())
+					{
+						if (moduleNameToProcess.ContainsKey(process.ProcessName))
+						{ continue; }
+						moduleNameToProcess[process.ProcessName] = process;
+					}
+					if (moduleNameToProcess.TryGetValue(autoAttach, out Process activeProcess))
+					{ AttachToProcess(activeProcess); }
+				}
+
+				// if we're attached to a process we can load the profile
+				if (m_selectedProcess != null)
+				{
+					if (!string.IsNullOrWhiteSpace(profilePath))
+					{ TryLoadProfile(profilePath); }
+				}
+
+				// automatically exit SRWE
+				if (autoExit)
+					Application.Exit();
+			}
+		}
+
+		private void TryLoadProfile(string profilePath)
+		{
+			if (File.Exists(profilePath))
+			{
+				XPathDocument xpDoc = new XPathDocument(profilePath);
+				XPathNavigator navProfile = xpDoc.CreateNavigator().SelectSingleNode("SRWE/Profile");
+				XPathNodeIterator iterator = navProfile.Select("Window");
+
+				UncheckTreeViewNodes(TV_WINDOW_TREE.Nodes);
+
+				while (iterator.MoveNext())
+					UpdateWindowFromProfile(iterator.Current);
+
+				SRWE_Settings.AddRecentProfile(profilePath);
+			}
+			else
+				SRWE_Settings.RemoveRecentProfile(profilePath);
+
+			RefreshRecentProfilesMenu();
 		}
 
 		private void AutoAttachToLastProcess()
@@ -162,18 +243,7 @@ namespace SRWE
 		private void TSI_PROFILE_LOAD_Click(object sender, EventArgs e)
 		{
 			if (OFD_PROFILE.ShowDialog(this) != System.Windows.Forms.DialogResult.OK) return;
-
-			XPathDocument xpDoc = new XPathDocument(OFD_PROFILE.FileName);
-			XPathNavigator navProfile = xpDoc.CreateNavigator().SelectSingleNode("SRWE/Profile");
-			XPathNodeIterator iterator = navProfile.Select("Window");
-
-			UncheckTreeViewNodes(TV_WINDOW_TREE.Nodes);
-
-			while (iterator.MoveNext())
-				UpdateWindowFromProfile(iterator.Current);
-
-			SRWE_Settings.AddRecentProfile(OFD_PROFILE.FileName);
-			RefreshRecentProfilesMenu();
+			TryLoadProfile(OFD_PROFILE.FileName);
 		}
 
 		private void TSI_PROFILE_SAVE_Click(object sender, EventArgs e)
@@ -197,23 +267,7 @@ namespace SRWE
 		{
 			string profilePath = (sender as ToolStripDropDownItem).ToolTipText;
 
-			if (File.Exists(profilePath))
-			{
-				XPathDocument xpDoc = new XPathDocument(profilePath);
-				XPathNavigator navProfile = xpDoc.CreateNavigator().SelectSingleNode("SRWE/Profile");
-				XPathNodeIterator iterator = navProfile.Select("Window");
-
-				UncheckTreeViewNodes(TV_WINDOW_TREE.Nodes);
-
-				while (iterator.MoveNext())
-					UpdateWindowFromProfile(iterator.Current);
-
-				SRWE_Settings.AddRecentProfile(profilePath); // Brings profile to TOP of the Recent Profiles list.
-			}
-			else
-				SRWE_Settings.RemoveRecentProfile(profilePath);
-
-			RefreshRecentProfilesMenu();
+			TryLoadProfile(profilePath);
 		}
 
 		private void TV_WINDOW_TREE_AfterSelect(object sender, TreeViewEventArgs e)

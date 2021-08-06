@@ -64,3 +64,18 @@ the _Load Profile_ button after you've downloaded them and stored them in a fold
 [Releases](https://github.com/dtgDTGdtg/SRWE/releases) tab on GitHub in the `SRWE-Example-Profiles.zip` file. They're just examples: if you want to have different
 resolutions, just load one of them, alter the resolution and save it under a different name. 
 
+## Command Line Arguments
+In order to quickly apply SRWE profiles to applications, you can create a shortcut to SRWE and add command line arguments to it.
+
+- `/process process-name` will attach to the given process on startup; this overrides the setting to attach to the last known process. Process name must _not_ contain the .exe extension.
+- `/profile path-to-profile` will automatically load the given SRWE profile. This also works when `/process` is not supplied but auto-attach is enabled (but does not necessarily make sense).
+- `/autoexit` will exit the application immediately after attaching and applying the profile. Only useful in combination with the previous commands, otherwise SRWE will simply quit without doing anything.
+
+### Examples
+Attach SRWE to Skyrim.exe:  
+`C:\SRWE\SRWE.exe /process "Skyrim"`
+
+Attach and apply a profile to Skyrim.exe, then quit SRWE immediately:  
+`C:\SRWE\SRWE.exe /process "Skyrim" /profile "C:\My SRWE Profiles\My-Skryim-Profile.xml" /autoexit`
+
+Note that the .exe extension of the process name (as seen in the "Select running application" dialog or task manager) has been omitted.
